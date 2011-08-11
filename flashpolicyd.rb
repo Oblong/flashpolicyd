@@ -39,10 +39,8 @@ require "logger"
 require "ostruct"
 require "thread"
 require "timeout"
-require "EventEmitter"
 
 class PolicyServer
-  attr_accessor :xml
   @@serverThread = nil
 
   # === Synopsis
@@ -53,8 +51,8 @@ class PolicyServer
   #   The port to listen on, if the port is < 1024 server must run as roo
   # +host+::
   #   The host to listen on, use 0.0.0.0 for all addresses
-  # +xml+::
-  #   The XML to serve to clients
+  # +domains+::
+  #   An array of the xdoms to support (defaults to '(*)')
   # +logger+::
   #   An instanse of the Ruby Standard Logger class
   # +timeout+::
@@ -65,7 +63,7 @@ class PolicyServer
       'port' => 7788,
       'maxclients' => 10,
       'host' => '0.0.0.0',
-      'xml' => '',
+      'domains' => ['*'],
       'logger' => lambda { | x | puts x },
       'timeout' => 10
     }.each { | key, value |
@@ -80,6 +78,19 @@ class PolicyServer
     @@bogusclients = 0
     @@totalclients = 0
     @@starttime = Time.new
+
+    @xml = <<-eos
+      <?xml version="1.0"?>
+      <!DOCTYPE cross-domain-policy SYSTEM "/xml/dtds/cross-domain-policy.dtd">
+      <cross-domain-policy>
+      <site-control permitted-cross-domain-policies="master-only"/>
+    eos
+
+    domains.each { | dom |
+      @xml <<= '<allow-access-from domain="' + dom + '" to-ports="*" />'
+    }
+
+    @xml <<= '</cross-domain-policy>'
 
     start
   end
