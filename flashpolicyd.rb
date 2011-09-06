@@ -41,6 +41,7 @@ require "thread"
 require "timeout"
 
 class PolicyServer
+  include EventEmitter
   @@serverThread = nil
 
   # === Synopsis
@@ -58,9 +59,9 @@ class PolicyServer
   # +timeout+::
   #   How long does client have to complete the whole process before the socket closes
   #   and the thread terminates
-  def initialize(opts)
+  def initialize(opts = {})
     {
-      'port' => 7788,
+      'port' => 10843,
       'maxclients' => 10,
       'host' => '0.0.0.0',
       'domains' => ['*'],
@@ -95,6 +96,9 @@ class PolicyServer
     start
   end
 
+  def listen(ignored, &block)
+    on('connect', &block)
+  end
 
   # Generic logging method that takes a severity constant from the Logger class such as Logger::DEBUG
   def log(msg)
@@ -136,9 +140,9 @@ class PolicyServer
 
   # Dump the current thread list
   def dumpthreads
-    Thread.list.each {|t|
+    Thread.list.each do |t|
       log("Thread: #{t.id} status #{t.status}")
-    }
+    end
   end
 
   # Prints some basic stats about the server so far, bogus client are ones that timeout or otherwise cause problems
@@ -165,6 +169,7 @@ class PolicyServer
   #
   # Any exception caught during this should mark a client as bogus
   def serve(connection)
+    emit('connect')
     client = connection.client
 
     # Flash clients send a null terminate request
